@@ -1,0 +1,444 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String           @id @default(cuid())
+  firstName      String
+  lastName       String
+  email          String           @unique
+  password       String
+  phone          String?
+  dateOfBirth    DateTime?
+  role           Role             @default(CUSTOMER)
+  isActive       Boolean          @default(true)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  cartItems      CartItem[]
+  orders         Order[]
+  promoCodeUsage PromoCodeUsage[]
+  reviews        Review[]
+  wishlistItems  WishlistItem[]
+  stockNotifications StockNotification[]
+  is_guest       Boolean          @default(false)
+
+  @@map("users")
+}
+
+model Product {
+  id               String              @id @default(cuid())
+  name             String
+  description      String?
+  price            Float
+  originalPrice    Float?
+  imageUrl         String?
+  model3DUrl       String?
+  sizes            String[]
+  colors           String[]
+  stock            Int                 @default(0)
+  category         String?
+  categoryId       String?
+  isOnSale         Boolean             @default(false)
+  isNewArrival     Boolean             @default(false)
+  isFeatured       Boolean             @default(false)
+  tags             String[]
+  weight           Float?
+  dimensions       String?
+  material         String?
+  careInstructions String?
+  isActive         Boolean             @default(true)
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  cartItems        CartItem[]
+  colorVariants    ColorVariant[]
+  discounts        discounts[]
+  orderItems       OrderItem[]
+  collections      ProductCollection[]
+  categoryRef      Category?           @relation(fields: [categoryId], references: [id])
+  reviews          Review[]
+  saleItems        SaleItem[]
+  wishlistItems    WishlistItem[]
+  stockNotifications StockNotification[]
+
+  @@map("products")
+}
+
+model Category {
+  id             String    @id @default(cuid())
+  name           String
+  slug           String    @unique
+  description    String?
+  parentCategory String?
+  imageUrl       String?
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  products       Product[]
+
+  @@map("categories")
+}
+
+model ColorVariant {
+  id        String   @id @default(cuid())
+  productId String
+  color     String
+  name      String
+  images    String[]
+  stock     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("color_variants")
+}
+
+model Sale {
+  id              String      @id @default(cuid())
+  name            String
+  description     String
+  discountPercent Float
+  startDate       DateTime
+  endDate         DateTime
+  isActive        Boolean     @default(true)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  collectionId    String?
+  saleItems       SaleItem[]
+  collection      Collection? @relation(fields: [collectionId], references: [id])
+
+  @@map("sales")
+}
+
+model Offer {
+  id                 String    @id @default(cuid())
+  title              String
+  description        String
+  imageUrl           String?
+  link               String?
+  isActive           Boolean   @default(true)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  discountValue      Float?
+  endDate            DateTime?
+  minimumOrderAmount Float?
+  startDate          DateTime?
+  discount           Float?
+  type               OfferType @default(ALL)
+  targetProductId    String?
+  targetCollectionId String?
+  isForNewUser       Boolean?  @default(false)
+  variant            Int       @default(0)
+  targetPage         String?   // Target page for the offer
+  targetSection      String?   // Target section on the page
+  displayLocation    String?   // 'header', 'hero', 'offers', 'sidebar', 'footer'
+
+  @@map("offers")
+}
+
+model PromoCodeUsage {
+  id          String    @id @default(cuid())
+  promoCodeId String
+  userId      String
+  orderId     String
+  usedAt      DateTime  @default(now())
+  promoCode   PromoCode @relation(fields: [promoCodeId], references: [id])
+  user        User      @relation(fields: [userId], references: [id])
+
+  @@unique([promoCodeId, userId, orderId])
+  @@map("promo_code_usage")
+}
+
+model Order {
+  id              String        @id @default(cuid())
+  userId          String?
+  status          OrderStatus   @default(PENDING)
+  totalAmount     Float
+  shippingAddress String
+  billingAddress  String
+  paymentMethod   String
+  paymentStatus   PaymentStatus @default(PENDING)
+  trackingNumber  String?
+  notes           String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  products        OrderItem[]
+  user            User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  guestName          String?
+  guestEmail         String?
+  guestPhone         String?
+  guestAddress       String?
+  orderTrackingToken String?     @unique
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String   @id @default(cuid())
+  orderId   String
+  productId String
+  quantity  Int
+  price     Float
+  size      String?
+  color     String?
+  createdAt DateTime @default(now())
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id])
+
+  @@map("order_items")
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  productId String
+  userId    String
+  rating    Int
+  comment   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, userId])
+  @@map("reviews")
+}
+
+model PromoCode {
+  id             String           @id @default(cuid())
+  code           String           @unique
+  description    String
+  discountType   PromoCodeType
+  discountValue  Float
+  minOrderAmount Float?
+  maxUses        Int?
+  usedCount      Int              @default(0)
+  startDate      DateTime
+  endDate        DateTime
+  isActive       Boolean          @default(true)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  usage          PromoCodeUsage[]
+
+  @@map("promo_codes")
+}
+
+model Contact {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  subject   String
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("contacts")
+}
+
+model Collection {
+  id              String              @id @default(cuid())
+  name            String
+  description     String
+  discountPercent Float               @default(0)
+  imageUrl        String?
+  isActive        Boolean             @default(true)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  products        ProductCollection[]
+  sales           Sale[]
+
+  @@map("collections")
+}
+
+model ProductCollection {
+  id           String     @id @default(cuid())
+  productId    String
+  collectionId String
+  createdAt    DateTime   @default(now())
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  product      Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, collectionId])
+  @@map("product_collections")
+}
+
+model SaleItem {
+  id        String   @id @default(cuid())
+  saleId    String
+  productId String
+  createdAt DateTime @default(now())
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sale      Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+
+  @@unique([saleId, productId])
+  @@map("sale_items")
+}
+
+model CartItem {
+  id        String   @id @default(cuid())
+  userId    String?
+  guestId   String?
+  productId String
+  quantity  Int      @default(1)
+  size      String?
+  color     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  product   Product  @relation(fields: [productId], references: [id])
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  guestCart GuestCart? @relation(fields: [guestId], references: [guestId], onDelete: Cascade)
+
+  @@unique([userId, productId, size, color])
+  @@unique([guestId, productId, size, color])
+  @@map("cart_items")
+}
+
+model GuestCart {
+  id        String   @id @default(cuid())
+  guestId   String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  items     CartItem[]
+
+  @@map("guest_carts")
+}
+
+model WishlistItem {
+  id        String   @id @default(cuid())
+  userId    String?
+  guestId   String?
+  productId String
+  createdAt DateTime @default(now())
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  guestWishlist GuestWishlist? @relation(fields: [guestId], references: [guestId], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@unique([guestId, productId])
+  @@map("wishlist_items")
+}
+
+model GuestWishlist {
+  id        String   @id @default(cuid())
+  guestId   String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  items     WishlistItem[]
+
+  @@map("guest_wishlists")
+}
+
+model StockNotification {
+  id        String   @id @default(cuid())
+  userId    String?
+  guestId   String?
+  productId String
+  email     String
+  isNotified Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@unique([guestId, productId])
+  @@map("stock_notifications")
+}
+
+model HeroBackground {
+  id             String   @id @default(cuid())
+  imageUrl       String?
+  isActive       Boolean  @default(true)
+  isDefault      Boolean  @default(false)
+  overlayOpacity Float    @default(0.2)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("hero_backgrounds")
+}
+
+model SiteSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("site_settings")
+}
+
+model discounts {
+  id        String       @id
+  productId String?
+  code      String       @unique
+  type      DiscountType
+  value     Float
+  minAmount Float?
+  maxUses   Int?
+  usedCount Int          @default(0)
+  startDate DateTime
+  endDate   DateTime
+  isActive  Boolean      @default(true)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime
+  products  Product?     @relation(fields: [productId], references: [id])
+}
+
+model AccessKey {
+  id        String    @id @default(cuid())
+  key       String    @unique
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  lastUsed  DateTime?
+
+  @@map("access_keys")
+}
+
+enum Role {
+  ADMIN
+  CUSTOMER
+  PROMOTER
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED_AMOUNT
+}
+
+enum PromoCodeType {
+  PERCENTAGE
+  FIXED_AMOUNT
+  FREE_SHIPPING
+}
+
+enum OfferType {
+  ALL
+  NEW_USER
+  PRODUCT
+  COLLECTION
+  CART
+}
