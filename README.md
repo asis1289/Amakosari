@@ -249,4 +249,4 @@ For support and questions:
 
 ---
 
-**आमाको Saaरी** - Celebrating Nepali heritage through authentic traditional fashion. 
+**आमाको Saaरी** - Celebrating Nepali heritage through authentic traditional fashion.
